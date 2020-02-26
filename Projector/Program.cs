@@ -1,8 +1,10 @@
 ﻿using EventStore.ClientAPI;
+using EventStore.ClientAPI.SystemData;
 using ProjectionFramework;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 
 namespace Projector
 {
@@ -10,19 +12,21 @@ namespace Projector
     {
         static void Main(string[] args)
         {
-            var eventStoreConnection = EventStoreConnection.Create(
-               ConnectionSettings.Default,
-               new IPEndPoint(IPAddress.Loopback, 1113));
+            var connectionString = "ConnectTo=tcp://admin:changeit@34.254.92.105:1113";
+            var settingsBuilder = ConnectionSettings.Create();
 
+            var eventStoreConnection = EventStoreConnection.Create(connectionString, settingsBuilder, "LOCAL");
             eventStoreConnection.ConnectAsync().Wait();
+
+            var mongoRepository = new MongoDAL.MongoDBRepository("mongodb+srv://projector:projector@cluster0-gr1bz.mongodb.net/test?retryWrites=true&w=majority");
 
             var projections = new List<IProjection>
             {
-                new CaseProjection()
-                ,new EntityProjection()
+                new CaseProjection(mongoRepository)
+                ,new EntityProjection(mongoRepository)
             };
 
-            var p = new ProjectionFramework.Projector(eventStoreConnection, projections, new MongoDAL.MongoDBRepository("mongodb+srv://projector:projector@cluster0-gr1bz.mongodb.net/test?retryWrites=true&w=majority"));
+            var p = new ProjectionFramework.Projector(eventStoreConnection, projections, mongoRepository);
 
             p.Start();
 
