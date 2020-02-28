@@ -10,28 +10,44 @@ namespace Projector
 {
     class Program
     {
+        static ManualResetEvent _quitEvent = new ManualResetEvent(false);
+
         static void Main(string[] args)
         {
-            var connectionString = "ConnectTo=tcp://admin:changeit@34.254.92.105:1113";
-            var settingsBuilder = ConnectionSettings.Create();
-
-            var eventStoreConnection = EventStoreConnection.Create(connectionString, settingsBuilder, "LOCAL");
-            eventStoreConnection.ConnectAsync().Wait();
-
-            var mongoRepository = new MongoDAL.MongoDBRepository("mongodb+srv://projector:projector@cluster0-gr1bz.mongodb.net/test?retryWrites=true&w=majority");
-
-            var projections = new List<IProjection>
+            try
             {
-                new CaseProjection(mongoRepository)
-                ,new EntityProjection(mongoRepository)
-            };
+                Console.CancelKeyPress += (sender, eArgs) => {
+                    _quitEvent.Set();
+                    eArgs.Cancel = true;
+                };
 
-            var p = new ProjectionFramework.Projector(eventStoreConnection, projections, mongoRepository);
+                var connectionString = "ConnectTo=tcp://admin:changeit@34.254.92.105:1113";
+                var settingsBuilder = ConnectionSettings.Create();
 
-            p.Start();
+                var eventStoreConnection = EventStoreConnection.Create(connectionString, settingsBuilder, "LOCAL");
+                eventStoreConnection.ConnectAsync().Wait();
 
-            Console.WriteLine("Projector Running");
-            Console.ReadLine();
+                var mongoRepository = new MongoDAL.MongoDBRepository("mongodb+srv://projector:projector@cluster0-gr1bz.mongodb.net/test?retryWrites=true&w=majority");
+
+                var projections = new List<IProjection>
+                {
+                    new CaseProjection(mongoRepository)
+                    ,new EntityProjection(mongoRepository)
+                };
+
+                var p = new ProjectionFramework.Projector(eventStoreConnection, projections, mongoRepository);
+
+                p.Start();
+
+                Console.WriteLine("Projector Running");
+
+                _quitEvent.WaitOne();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.Write(e.StackTrace);
+            }
         }
     }
 }
