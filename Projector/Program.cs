@@ -1,5 +1,6 @@
 ﻿using EventStore.ClientAPI;
-using EventStore.ClientAPI.SystemData;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using ProjectionFramework;
 using System;
 using System.Collections.Generic;
@@ -14,17 +15,25 @@ namespace Projector
 
         static void Main(string[] args)
         {
+            var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+            });
+
+            var logger = loggerFactory.CreateLogger<Program>();
+
+            Console.CancelKeyPress += (sender, eArgs) =>
+            {
+                _quitEvent.Set();
+                eArgs.Cancel = true;
+            };
+
             try
             {
-                Console.CancelKeyPress += (sender, eArgs) => {
-                    _quitEvent.Set();
-                    eArgs.Cancel = true;
-                };
-
                 var connectionString = "ConnectTo=tcp://admin:changeit@34.254.92.105:1113";
                 var settingsBuilder = ConnectionSettings.Create();
 
-                var eventStoreConnection = EventStoreConnection.Create(connectionString, settingsBuilder, "LOCAL");
+                var eventStoreConnection = EventStoreConnection.Create(connectionString, settingsBuilder, "Projector");
                 eventStoreConnection.ConnectAsync().Wait();
 
                 var mongoRepository = new MongoDAL.MongoDBRepository("mongodb+srv://projector:projector@cluster0-gr1bz.mongodb.net/test?retryWrites=true&w=majority");
@@ -37,16 +46,18 @@ namespace Projector
 
                 var p = new ProjectionFramework.Projector(eventStoreConnection, projections, mongoRepository);
 
+                logger.LogInformation("Starting Projector");
+
                 p.Start();
 
-                Console.WriteLine("Projector Running");
+                logger.LogInformation("Projector Started");
 
                 _quitEvent.WaitOne();
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
-                Console.Write(e.StackTrace);
+                logger.LogError(e.Message);
+                logger.LogError(e.StackTrace);
             }
         }
     }
