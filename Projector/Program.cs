@@ -1,10 +1,8 @@
 ﻿using EventStore.ClientAPI;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ProjectionFramework;
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Threading;
 
 namespace Projector
@@ -30,7 +28,7 @@ namespace Projector
 
             try
             {
-                var connectionString = "ConnectTo=tcp://admin:changeit@34.254.92.105:1113";
+                var connectionString = "ConnectTo=tcp://admin:fencloudnative2020@54.229.179.193:1113";
                 var settingsBuilder = ConnectionSettings.Create();
 
                 var eventStoreConnection = EventStoreConnection.Create(connectionString, settingsBuilder, "Projector");
