@@ -18,14 +18,6 @@ namespace Projector
         static async Task Main(string[] args)
         {
             await CreateHostBuilder(args).Build().RunAsync();
-
-            Console.CancelKeyPress += (sender, eArgs) =>
-            {
-                _quitEvent.Set();
-                eArgs.Cancel = true;
-            };
-
-            _quitEvent.WaitOne();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args)

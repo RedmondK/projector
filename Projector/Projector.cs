@@ -13,18 +13,17 @@ namespace Projector
 {
     public class Projector : IHostedService
     {
-        private IConfigurationRoot Config { get; }
+        //private IConfigurationRoot Config { get; }
         private ILogger<Projector> Logger { get; }
         private CancellationTokenSource CancellationTokenSource { get; } = new CancellationTokenSource();
         private TaskCompletionSource<bool> TaskCompletionSource { get; } = new TaskCompletionSource<bool>();
 
-        public Projector(IConfigurationRoot config, ILoggerFactory loggerFactory)
+        public Projector(ILoggerFactory loggerFactory)
         {
             Logger = loggerFactory.CreateLogger<Projector>();
-            Config = config;
         }
 
-        public void Project()
+        public async Task Project(CancellationToken cancellationToken)
         {
             try
             {
@@ -46,7 +45,7 @@ namespace Projector
 
                 Logger.LogInformation("Starting Projector");
 
-                p.Start();
+                await Task.Run(() => p.Start());
 
                 Logger.LogInformation("Projector Started");
             }
@@ -61,11 +60,15 @@ namespace Projector
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            Task.Run(() => Project(CancellationTokenSource.Token));
             return Task.CompletedTask;
+
         }
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            return Task.CompletedTask;
+            Logger.LogInformation("Projector Stopping");
+            TaskCompletionSource.SetResult(true);
+            return TaskCompletionSource.Task;
         }
     }
 }
