@@ -1,9 +1,13 @@
 ﻿using EventStore.ClientAPI;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ProjectionFramework;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Projector
 {
@@ -11,14 +15,9 @@ namespace Projector
     {
         static ManualResetEvent _quitEvent = new ManualResetEvent(false);
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            var loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder.AddConsole();
-            });
-
-            var logger = loggerFactory.CreateLogger<Program>();
+            await CreateHostBuilder(args).Build().RunAsync();
 
             Console.CancelKeyPress += (sender, eArgs) =>
             {
@@ -26,39 +25,15 @@ namespace Projector
                 eArgs.Cancel = true;
             };
 
-            try
+            _quitEvent.WaitOne();
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            return Host.CreateDefaultBuilder().ConfigureServices((hostContext, services) =>
             {
-                var connectionString = "ConnectTo=tcp://admin:fencloudnative2020@54.229.179.193:1113";
-                var settingsBuilder = ConnectionSettings.Create();
-
-                var eventStoreConnection = EventStoreConnection.Create(connectionString, settingsBuilder, "Projector");
-                eventStoreConnection.ConnectAsync().Wait();
-
-                var mongoRepository = new MongoDAL.MongoDBRepository("mongodb+srv://projector:projector@cluster0-gr1bz.mongodb.net/test?retryWrites=true&w=majority");
-
-                var projections = new List<IProjection>
-                {
-                    new CaseProjection(mongoRepository)
-                    ,new EntityProjection(mongoRepository)
-                };
-
-                var p = new ProjectionFramework.Projector(eventStoreConnection, projections, mongoRepository);
-
-                logger.LogInformation("Starting Projector");
-
-                p.Start();
-
-                logger.LogInformation("Projector Started");
-
-                _quitEvent.WaitOne();
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e.Message);
-                logger.LogError(e.StackTrace);
-                logger.LogError(e.InnerException.Message);
-                logger.LogError(e.InnerException.StackTrace);
-            }
+                services.AddHostedService<Projector>();
+            });
         }
     }
 }
