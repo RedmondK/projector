@@ -56,6 +56,8 @@ namespace Projector
             {
                 logger.LogError(e.Message);
                 logger.LogError(e.StackTrace);
+                logger.LogError(e.InnerException.Message);
+                logger.LogError(e.InnerException.StackTrace);
             }
         }
     }
