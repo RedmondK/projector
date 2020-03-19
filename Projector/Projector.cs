@@ -13,27 +13,28 @@ namespace Projector
 {
     public class Projector : IHostedService
     {
-        //private IConfigurationRoot Config { get; }
+        private IConfiguration Config { get; }
         private ILogger<Projector> Logger { get; }
         private CancellationTokenSource CancellationTokenSource { get; } = new CancellationTokenSource();
         private TaskCompletionSource<bool> TaskCompletionSource { get; } = new TaskCompletionSource<bool>();
 
-        public Projector(ILoggerFactory loggerFactory)
+        public Projector(IConfiguration config, ILoggerFactory loggerFactory)
         {
+            Config = config;
             Logger = loggerFactory.CreateLogger<Projector>();
         }
 
-        public async Task Project(CancellationToken cancellationToken)
+        public async Task Project()
         {
             try
             {
-                var connectionString = "ConnectTo=tcp://admin:fencloudnative2020@54.229.179.193:1113";
+                var connectionString = Config.GetValue<string>("eventStoreConnectionString");
                 var settingsBuilder = ConnectionSettings.Create();
 
-                var eventStoreConnection = EventStoreConnection.Create(connectionString, settingsBuilder, "Projector");
+                var eventStoreConnection = EventStoreConnection.Create(connectionString, settingsBuilder, Config.GetValue<string>("eventStoreConnectionName"));
                 eventStoreConnection.ConnectAsync().Wait();
 
-                var mongoRepository = new MongoDAL.MongoDBRepository("mongodb+srv://projector:projector@cluster0-gr1bz.mongodb.net/test?retryWrites=true&w=majority");
+                var mongoRepository = new MongoDAL.MongoDBRepository(Config.GetValue<string>("stateDbConnectionString"));
 
                 var projections = new List<IProjection>
                 {
@@ -60,7 +61,7 @@ namespace Projector
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            Task.Run(() => Project(CancellationTokenSource.Token));
+            Task.Run(() => Project());
             return Task.CompletedTask;
 
         }
